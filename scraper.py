@@ -1,17 +1,34 @@
 # https://www.edureka.co/blog/web-scraping-with-python/#whywebscraping
 # https://medium.com/dropout-analytics/selenium-and-geckodriver-on-mac
 # -b411dbfe61bc
-# The link above was used to learn how to create a web scraper using Python.
-
+# The links above was used to learn how to create a web scraper using Python.
 from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-from bs4 import BeautifulSoup
-import pandas as pd
+# from bs4 import BeautifulSoup
+# import pandas as pd
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as Ec
+from selenium.common.exceptions import TimeoutException
 
 driver_path = '/Users/michaellennonwinton/Downloads/geckodriver'
 
+
+def wait_for_page_to_load(search):
+    print(f"Searching for {search}")
+    try:
+        element_present = Ec.title_contains(search)
+        wait.until(element_present)
+    except TimeoutException:
+        print("Timed out waiting for page to load")
+
+
 sea_conditions = []
 driver = webdriver.Firefox(executable_path=driver_path)
-driver.get("https://www.python.org")
-
-print(driver.title)
+driver.get("https://www.metservice.com/marine")
+wait = WebDriverWait(driver, timeout=30, poll_frequency=2)
+webpage = driver.page_source
+area = driver.find_element(by=By.LINK_TEXT, value="Kapiti and Wellington")
+area.click()
+wait_for_page_to_load("Kapiti and Wellington")
+surf = (driver.find_element(by=By.LINK_TEXT, value="Surf"))
+surf.click()
