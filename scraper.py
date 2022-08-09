@@ -8,17 +8,16 @@ The links above was used to learn how to create a web scraper using Python.
 """
 from selenium import webdriver
 from bs4 import BeautifulSoup
-# import pandas as pd
 from selenium.webdriver.common.by import By
+from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as Ec
+from selenium.webdriver.support import expected_conditions as ec
 from selenium.common.exceptions import TimeoutException, \
     ElementClickInterceptedException
+from webdriver_manager.firefox import GeckoDriverManager
 
-DRIVER_PATH = '/Users/michaellennonwinton/Downloads/geckodriver'
 
-
-def wait_for_page_to_load(search):
+def wait_for_page_title_to_load(search):
     """
     This waits for the webpage to load by waiting for the webpage's title to
     present.
@@ -30,13 +29,13 @@ def wait_for_page_to_load(search):
     """
     print(f"Searching for {search}")
     try:
-        element_present = Ec.title_contains(search)
+        element_present = ec.title_contains(search)
         wait.until(element_present)
     except TimeoutException:
         print("Timed out waiting for page to load")
 
 
-def wait_for_page_element(element):
+def wait_for_clickable_page_element(element):
     """
     This waits for the webpage to load by waiting for an element on the
     webpage to be clickable.
@@ -48,37 +47,83 @@ def wait_for_page_element(element):
     """
     print(f"Waiting for {element} to be present")
     try:
-        element_present = Ec.element_to_be_clickable((By.LINK_TEXT, element))
+        element_present = ec.element_to_be_clickable((By.LINK_TEXT, element))
         clickable_element = wait.until(element_present)
     except TimeoutException:
         print("Timed out waiting for page to load")
     return clickable_element
 
 
-driver = webdriver.Firefox(executable_path=DRIVER_PATH)
+def wait_for_page_element_to_be_found(element):
+    """
+    This waits for the webpage to load by waiting for an element text to be
+    present.
+
+    Parameter:
+        element (str): string that is being searched for
+
+    return:
+    """
+    print(f"Waiting for {element} to be present")
+    try:
+        element_present = ec.text_to_be_present_in_element(
+            (By.XPATH, f'//*[contains(text(), "{element}")]'), element)
+        wait.until(element_present)
+    except TimeoutException:
+        print(f"Timed out waiting for page to load. Couldn't find {element}")
+    return driver.find_element(By.XPATH, f"//*[contains(text(), '{element}')]")
+
+
+def click_page_element(element, element_type):
+    """
+    This will wait for the page element that will be clicked to load and
+    then click the text/link.
+
+    Parameter:
+        element (str): string that is being searched for
+        element_type (str): the type of the element being searched for i.e.
+            link, text, id, etc.
+
+    return:
+    """
+
+    try:
+        if element_type == "link":
+            web_element = wait_for_clickable_page_element(element)
+        elif element_type == "text":
+            web_element = wait_for_page_element_to_be_found(element)
+        web_element.click()
+    except ElementClickInterceptedException:
+        print(f"Couldn't find: {element}. Trying to click on the button "
+              f"again")
+        driver.execute_script("arguments[0].click()", web_element)
+
+
+driver = webdriver.Firefox(
+    service=Service(executable_path=GeckoDriverManager().install())
+)
 driver.get("https://www.metservice.com/marine")
 wait = WebDriverWait(driver, timeout=30)
 webpage = driver.page_source
 area = driver.find_element(by=By.LINK_TEXT, value="Kapiti and Wellington")
 area.click()
-wait_for_page_to_load("Kapiti and Wellington")
+wait_for_page_title_to_load("Kapiti and Wellington")
 
-try:
-    surf = wait_for_page_element("Surf")
-    surf.click()
-except ElementClickInterceptedException:
-    print("Trying to click on the button again")
-    driver.execute_script("arguments[0].click()", surf)
+click_page_element("Surf", "link")
+click_page_element("Lyall Bay", "text")
 
-wait_for_page_to_load("Lyall Bay")
-bay = driver.find_element(By.XPATH, "//*[contains(text(),'Lyall Bay')]")
-bay.click()
+wait_for_page_element_to_be_found("Sea Temperature")
 
-wait_for_page_element("View full surf forecasts")
-location_forecast = (driver.find_element(by=By.LINK_TEXT,
-                                         value="View full surf forecasts"))
-location_forecast.click()
+get_title = driver.title
+print(get_title)
 
-for a in BeautifulSoup.findAll('a', href=True, attrs={'class': 'ScrollTable '
-                                                      'Tile-body'}):
-    print(a)
+if "Lyall Bay" in get_title:
+
+    content = driver.page_source
+    soup = BeautifulSoup(content, "html.parser")
+
+    print(soup.prettify())
+else:
+    print("Page did not load correctly")
+
+driver.quit()
