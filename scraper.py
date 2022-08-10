@@ -13,8 +13,11 @@ from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.common.exceptions import (TimeoutException,
-                                        ElementClickInterceptedException)
+                                        ElementClickInterceptedException,
+                                        NoSuchElementException)
 from webdriver_manager.firefox import GeckoDriverManager
+
+DEGREE_SYMBOL = u'\N{DEGREE SIGN}'
 
 
 def wait_for_page_title_to_load(search):
@@ -33,6 +36,7 @@ def wait_for_page_title_to_load(search):
         wait.until(element_present)
     except TimeoutException:
         print("Timed out waiting for page to load")
+    print(f"{search} was found")
 
 
 def wait_for_clickable_page_element(element):
@@ -49,8 +53,9 @@ def wait_for_clickable_page_element(element):
     try:
         element_present = ec.element_to_be_clickable((By.LINK_TEXT, element))
         clickable_element = wait.until(element_present)
-    except TimeoutException:
-        print("Timed out waiting for page to load")
+    except (TimeoutException, NoSuchElementException) as e:
+        print(f"Couldn't find {element}. Error was {e}")
+    print(f"{element} was found")
     return clickable_element
 
 
@@ -69,8 +74,9 @@ def wait_for_page_element_to_be_found(element):
         element_present = ec.text_to_be_present_in_element(
             (By.XPATH, f'//*[contains(text(), "{element}")]'), element)
         wait.until(element_present)
-    except TimeoutException:
-        print(f"Timed out waiting for page to load. Couldn't find {element}")
+    except (TimeoutException, NoSuchElementException) as e:
+        print(f"Couldn't find {element}. Error was {e}")
+    print(f"{element} was found")
     return driver.find_element(By.XPATH, f"//*[contains(text(), '{element}')]")
 
 
@@ -99,31 +105,60 @@ def click_page_element(element, element_type):
         driver.execute_script("arguments[0].click()", web_element)
 
 
+def get_sea_information(soup_obj):
+    """
+    This retrieves the "Sea Temperature" information from the webpage. This
+    will return the water temperature of the day and the wetsuit
+    recommendation for the water
+
+    Parameter:
+        soup_obj (BeautifulSoup): BeautifulSoup HTML parsed webpage
+
+    return (tuple): This will return the water temp and wetsuit thickness
+                    recommendation
+    """
+    water_temp = None
+    wetsuit_thickness = None
+    water_information = soup_obj.findAll("span",
+                                         {"class": "u-textBold u-pR-xs"})
+    for info in water_information:
+        info = info.string
+        if DEGREE_SYMBOL in info:
+            water_temp = info
+        elif "mm" in info:
+            wetsuit_thickness = info
+    return water_temp, wetsuit_thickness
+
+
+location = "Lyall Bay"
+region = "Kapiti and Wellington"
 driver = webdriver.Firefox(
     service=Service(executable_path=GeckoDriverManager().install())
 )
 driver.get("https://www.metservice.com/marine")
 wait = WebDriverWait(driver, timeout=30)
-webpage = driver.page_source
-area = driver.find_element(by=By.LINK_TEXT, value="Kapiti and Wellington")
-area.click()
-wait_for_page_title_to_load("Kapiti and Wellington")
+
+click_page_element(region, "link")
+wait_for_page_title_to_load(region)
 
 click_page_element("Surf", "link")
-click_page_element("Lyall Bay", "text")
+click_page_element(location, "text")
+wait_for_page_title_to_load(f"{location} Surf Forecast")
 
-wait_for_page_element_to_be_found("Sea Temperature")
-
-get_title = driver.title
-print(get_title)
-
-if "Lyall Bay" in get_title:
+if location in driver.title:
+    wait_for_page_element_to_be_found("Sea Temperature")  # The title may
+    # have loaded correctly. The information on the webpage may not be
+    # loaded fully. So this has been added.
 
     content = driver.page_source
     soup = BeautifulSoup(content, "html.parser")
 
     print(soup.prettify())
-else:
-    print("Page did not load correctly")
+    water_temperature, recommended_wetsuit = get_sea_information(soup)
+    print(f"The water temperature today is {water_temperature}. It is "
+          f"recommended to use a {recommended_wetsuit} today.")
 
-driver.quit()
+else:
+    print("Not on the desired webpage")
+
+driver.quit()  # Quit the instance of the browser that is open
