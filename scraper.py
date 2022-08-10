@@ -6,14 +6,14 @@ https://medium.com/dropout-analytics/selenium-and-geckodriver-on-mac
 -b411dbfe61bc
 The links above was used to learn how to create a web scraper using Python.
 """
-from selenium import webdriver
 from bs4 import BeautifulSoup
+from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
-from selenium.common.exceptions import TimeoutException, \
-    ElementClickInterceptedException
+from selenium.common.exceptions import (TimeoutException,
+                                        ElementClickInterceptedException)
 from webdriver_manager.firefox import GeckoDriverManager
 
 
