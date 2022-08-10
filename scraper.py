@@ -44,6 +44,9 @@ def navigate_to_page(web_driver, selected_region, surf_spot, activity):
     click_page_element(activity, "link")
     click_page_element(surf_spot, "text")
     wait_for_page_title_to_load(f"{surf_spot} Surf Forecast")
+    wait_for_page_element_to_be_found("Sea Temperature")  # The title may
+    # have loaded correctly. The information on the webpage may not be
+    # loaded fully. So this has been added.
 
 
 def wait_for_page_title_to_load(search):
@@ -183,28 +186,34 @@ def get_daily_rating(soup_obj):
     return daily_surf
 
 
-driver = webdriver.Firefox(
-    service=Service(executable_path=GeckoDriverManager().install())
-)
-wait = WebDriverWait(driver, timeout=30)
+def webscrape_information():
+    """
+    This navigates to the desired page and then scrapes the desired
+    information.
 
-navigate_to_page(driver, REGION, LOCATION, ACTIVITY)
+    return: None
+    """
+    navigate_to_page(driver, REGION, LOCATION, ACTIVITY)
 
-if LOCATION in driver.title:
-    wait_for_page_element_to_be_found("Sea Temperature")  # The title may
-    # have loaded correctly. The information on the webpage may not be
-    # loaded fully. So this has been added.
+    if LOCATION in driver.title:
+        content = driver.page_source
+        soup = BeautifulSoup(content, "html.parser")
 
-    content = driver.page_source
-    soup = BeautifulSoup(content, "html.parser")
+        water_temperature, recommended_wetsuit = get_sea_information(soup)
+        print(f"The water temperature today is {water_temperature}. It is "
+              f"recommended to use a {recommended_wetsuit} today.")
+        surf_week = get_daily_rating(soup)
+        print(surf_week)
 
-    water_temperature, recommended_wetsuit = get_sea_information(soup)
-    print(f"The water temperature today is {water_temperature}. It is "
-          f"recommended to use a {recommended_wetsuit} today.")
-    surf_week = get_daily_rating(soup)
-    print(surf_week)
+    else:
+        print("Not on the desired webpage")
 
-else:
-    print("Not on the desired webpage")
+    driver.quit()  # Quit the instance of the browser that is open
 
-driver.quit()  # Quit the instance of the browser that is open
+
+if __name__ == "__main__":
+    driver = webdriver.Firefox(
+        service=Service(executable_path=GeckoDriverManager().install())
+    )
+    wait = WebDriverWait(driver, timeout=30)
+    webscrape_information()
