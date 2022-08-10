@@ -17,7 +17,33 @@ from selenium.common.exceptions import (TimeoutException,
                                         NoSuchElementException)
 from webdriver_manager.firefox import GeckoDriverManager
 
-DEGREE_SYMBOL = u'\N{DEGREE SIGN}'
+ACTIVITY = "Surf"
+DEGREE_SYMBOL = "\N{DEGREE SIGN}"
+HOME_PAGE_URL = "https://www.metservice.com/marine"
+LOCATION = "Lyall Bay"
+REGION = "Kapiti and Wellington"
+
+
+def navigate_to_page(web_driver, selected_region, surf_spot, activity):
+    """
+    Given the parameters it will navigate through the website to the desired
+    webpage
+
+    Parameter:
+        web_driver (WebDriver): WebDriver object
+        selected_region (str): The region that the surf spot is located
+        surf_spot (str): name of the surf location
+        activity (str): name of the activity on the webpage
+
+    return: None
+    """
+    web_driver.get(HOME_PAGE_URL)
+    click_page_element(selected_region, "link")
+    wait_for_page_title_to_load(selected_region)
+
+    click_page_element(activity, "link")
+    click_page_element(surf_spot, "text")
+    wait_for_page_title_to_load(f"{surf_spot} Surf Forecast")
 
 
 def wait_for_page_title_to_load(search):
@@ -53,8 +79,8 @@ def wait_for_clickable_page_element(element):
     try:
         element_present = ec.element_to_be_clickable((By.LINK_TEXT, element))
         clickable_element = wait.until(element_present)
-    except (TimeoutException, NoSuchElementException) as e:
-        print(f"Couldn't find {element}. Error was {e}")
+    except (TimeoutException, NoSuchElementException) as ex:
+        print(f"Couldn't find {element}. Error was {ex}")
     print(f"{element} was found")
     return clickable_element
 
@@ -74,8 +100,8 @@ def wait_for_page_element_to_be_found(element):
         element_present = ec.text_to_be_present_in_element(
             (By.XPATH, f'//*[contains(text(), "{element}")]'), element)
         wait.until(element_present)
-    except (TimeoutException, NoSuchElementException) as e:
-        print(f"Couldn't find {element}. Error was {e}")
+    except (TimeoutException, NoSuchElementException) as ex:
+        print(f"Couldn't find {element}. Error was {ex}")
     print(f"{element} was found")
     return driver.find_element(By.XPATH, f"//*[contains(text(), '{element}')]")
 
@@ -130,22 +156,41 @@ def get_sea_information(soup_obj):
     return water_temp, wetsuit_thickness
 
 
-location = "Lyall Bay"
-region = "Kapiti and Wellington"
+def get_daily_rating(soup_obj):
+    """
+    This retrieves the daily overall rating of the surf. This is just a
+    value from 1-10, but it tells the rating for the week (including the
+    current day)
+
+    Parameter:
+        soup_obj (BeautifulSoup): BeautifulSoup HTML parsed webpage
+
+    return (dict): dictionary containing the days and their rating
+    """
+    daily_rating = soup_obj.findAll("button",
+                                    {"class": "Tab-item u-sm-width1of1"})
+    daily_surf = {}
+    for day in daily_rating:
+        button_contents = day.contents
+        date = ""
+        for count, day_info in enumerate(button_contents):
+            detail = day_info.text
+            if count == (len(button_contents) - 1):
+                day_rating = detail
+            else:
+                date += detail if detail.isalpha() else f" {detail}"
+        daily_surf[date] = {"Overall rating": day_rating}
+    return daily_surf
+
+
 driver = webdriver.Firefox(
     service=Service(executable_path=GeckoDriverManager().install())
 )
-driver.get("https://www.metservice.com/marine")
 wait = WebDriverWait(driver, timeout=30)
 
-click_page_element(region, "link")
-wait_for_page_title_to_load(region)
+navigate_to_page(driver, REGION, LOCATION, ACTIVITY)
 
-click_page_element("Surf", "link")
-click_page_element(location, "text")
-wait_for_page_title_to_load(f"{location} Surf Forecast")
-
-if location in driver.title:
+if LOCATION in driver.title:
     wait_for_page_element_to_be_found("Sea Temperature")  # The title may
     # have loaded correctly. The information on the webpage may not be
     # loaded fully. So this has been added.
@@ -153,10 +198,11 @@ if location in driver.title:
     content = driver.page_source
     soup = BeautifulSoup(content, "html.parser")
 
-    print(soup.prettify())
     water_temperature, recommended_wetsuit = get_sea_information(soup)
     print(f"The water temperature today is {water_temperature}. It is "
           f"recommended to use a {recommended_wetsuit} today.")
+    surf_week = get_daily_rating(soup)
+    print(surf_week)
 
 else:
     print("Not on the desired webpage")
