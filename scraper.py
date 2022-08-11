@@ -186,6 +186,25 @@ def get_daily_rating(soup_obj):
     return daily_surf
 
 
+def get_surf_conditions(soup_obj, daily_surf):
+    """
+
+    Parameter:
+        soup_obj (BeautifulSoup): BeautifulSoup HTML parsed webpage
+        daily_surf (dict): Dictionary containing each day of the week
+
+    return:
+    """
+    for date_key in daily_surf.keys():
+        day = daily_surf[date_key]
+        print(day)
+        table_information = soup_obj.findAll("tbody")[0].contents
+        for row_item in table_information:
+            for count, value in enumerate(row_item.contents):
+                print(f"{count}: {value.text}")
+    print(table_information)
+
+
 def webscrape_information():
     """
     This navigates to the desired page and then scrapes the desired
@@ -196,14 +215,16 @@ def webscrape_information():
     navigate_to_page(driver, REGION, LOCATION, ACTIVITY)
 
     if LOCATION in driver.title:
-        content = driver.page_source
-        soup = BeautifulSoup(content, "html.parser")
+        soup = BeautifulSoup(driver.page_source, "html.parser")
+        # print(soup.prettify())
 
         water_temperature, recommended_wetsuit = get_sea_information(soup)
         print(f"The water temperature today is {water_temperature}. It is "
               f"recommended to use a {recommended_wetsuit} today.")
         surf_week = get_daily_rating(soup)
         print(surf_week)
+
+        get_surf_conditions(soup, surf_week)
 
     else:
         print("Not on the desired webpage")
