@@ -188,6 +188,10 @@ def get_daily_rating(soup_obj):
 
 def get_surf_conditions(soup_obj, daily_surf):
     """
+    This grabs the information from the table on the desired webpage and
+    then edits the dictionary given. It splits the data up the time of day
+    and each time has the sea conditions. It goes into each day of the week
+    and supplies that data.
 
     Parameter:
         soup_obj (BeautifulSoup): BeautifulSoup HTML parsed webpage
@@ -195,13 +199,20 @@ def get_surf_conditions(soup_obj, daily_surf):
 
     return:
     """
-    for date_key in daily_surf.keys():
-        day = daily_surf[date_key]
-        print(day)
+    for date in daily_surf:
+        day = daily_surf[date]
         table_information = soup_obj.findAll("tbody")[0].contents
-        for row_item in table_information:
-            for count, value in enumerate(row_item.contents):
-                print(f"{count}: {value.text}")
+        for ind, time in enumerate(table_information[0].contents):
+            time = time.text
+            if time.isalnum():
+                day[time] = {}
+                time_of_day = day[time]
+                for row_item in table_information[1:]:
+                    content = row_item.contents
+                    if len(content) > 2:
+                        value = ("N/A" if content[ind].text == "" else
+                                 content[ind].text)
+                        time_of_day[content[0].text] = value
     print(table_information)
 
 
