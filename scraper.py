@@ -17,11 +17,11 @@ from selenium.common.exceptions import (TimeoutException,
                                         NoSuchElementException)
 from webdriver_manager.firefox import GeckoDriverManager
 
+from database_talker import get_surf_location_and_regions
+
 ACTIVITY = "Surf"
 DEGREE_SYMBOL = "\N{DEGREE SIGN}"
 HOME_PAGE_URL = "https://www.metservice.com/marine"
-LOCATION = "Lyall Bay"
-REGION = "Kapiti and Wellington"
 
 
 def navigate_to_page(web_driver, selected_region, surf_spot, activity):
@@ -78,7 +78,7 @@ def wait_for_clickable_page_element(element, element_type):
         element_type (str): the type of the element being searched for i.e.
             link, text, id, etc.
 
-    return:
+    return (WebElement): WebElement object
     """
     print(f"Waiting for {element} to be present")
     try:
@@ -102,7 +102,7 @@ def wait_for_page_element_to_be_found(element):
     Parameter:
         element (str): string that is being searched for
 
-    return:
+    return (WebElement): WebElement object
     """
     print(f"Waiting for {element} to be present")
     try:
@@ -235,21 +235,25 @@ def webscrape_information():
 
     return: None
     """
-    navigate_to_page(driver, REGION, LOCATION, ACTIVITY)
+    surf_spots = get_surf_location_and_regions()
+    for surf_entry in surf_spots:
+        location = surf_entry[0]
+        region = surf_entry[1]
+        navigate_to_page(driver, region, location, ACTIVITY)
 
-    if LOCATION in driver.title:
-        soup = BeautifulSoup(driver.page_source, "html.parser")
+        if location in driver.title:
+            soup = BeautifulSoup(driver.page_source, "html.parser")
 
-        water_temperature, recommended_wetsuit = get_sea_information(soup)
-        print(f"The water temperature today is {water_temperature}. It is "
-              f"recommended to use a {recommended_wetsuit} today.")
-        surf_week = get_daily_rating(soup)
-        print(surf_week)
+            water_temperature, recommended_wetsuit = get_sea_information(soup)
+            print(f"The water temperature today is {water_temperature}. It is "
+                  f"recommended to use a {recommended_wetsuit} today.")
+            surf_week = get_daily_rating(soup)
+            print(surf_week)
 
-        get_surf_conditions(driver, surf_week)
+            get_surf_conditions(driver, surf_week)
 
-    else:
-        print("Not on the desired webpage")
+        else:
+            print("Not on the desired webpage")
 
     driver.quit()  # Quit the instance of the browser that is open
 
