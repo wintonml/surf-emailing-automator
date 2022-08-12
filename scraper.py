@@ -68,19 +68,25 @@ def wait_for_page_title_to_load(search):
     print(f"{search} was found")
 
 
-def wait_for_clickable_page_element(element):
+def wait_for_clickable_page_element(element, element_type):
     """
     This waits for the webpage to load by waiting for an element on the
     webpage to be clickable.
 
     Parameter:
         element (str): string that is being searched for
+        element_type (str): the type of the element being searched for i.e.
+            link, text, id, etc.
 
     return:
     """
     print(f"Waiting for {element} to be present")
     try:
-        element_present = ec.element_to_be_clickable((By.LINK_TEXT, element))
+        if element_type == "link":
+            locator = (By.LINK_TEXT, element)
+        else:
+            locator = (By.XPATH, f'//*[contains(text(), "{element}")]')
+        element_present = ec.element_to_be_clickable(locator)
         clickable_element = wait.until(element_present)
     except (TimeoutException, NoSuchElementException) as ex:
         print(f"Couldn't find {element}. Error was {ex}")
@@ -109,7 +115,7 @@ def wait_for_page_element_to_be_found(element):
     return driver.find_element(By.XPATH, f"//*[contains(text(), '{element}')]")
 
 
-def click_page_element(element, element_type):
+def click_page_element(element, element_type=None):
     """
     This will wait for the page element that will be clicked to load and
     then click the text/link.
@@ -123,10 +129,14 @@ def click_page_element(element, element_type):
     """
 
     try:
-        if element_type == "link":
-            web_element = wait_for_clickable_page_element(element)
+        if element_type in ["link", "button"]:
+            web_element = wait_for_clickable_page_element(element,
+                                                          element_type)
         elif element_type == "text":
             web_element = wait_for_page_element_to_be_found(element)
+        else:
+            web_element = driver.find_element(
+                By.XPATH, f'//*[contains(text(), "{element}")]')
         web_element.click()
     except ElementClickInterceptedException:
         print(f"Couldn't find: {element}. Trying to click on the button "
@@ -186,6 +196,38 @@ def get_daily_rating(soup_obj):
     return daily_surf
 
 
+def get_surf_conditions(web_driver, daily_surf):
+    """
+    This grabs the information from the table on the desired webpage and
+    then edits the dictionary given. It splits the data up the time of day
+    and each time has the sea conditions. It goes into each day of the week
+    and supplies that data.
+
+    Parameter:
+        web_driver (WebDriver): WebDriver object
+        daily_surf (dict): Dictionary containing each day of the week
+
+    return:
+    """
+    for date in daily_surf:
+        search_day = ' '.join(date.split()[1:])
+        click_page_element(search_day, "button")
+        soup_obj = BeautifulSoup(web_driver.page_source, "html.parser")
+        day = daily_surf[date]
+        table_information = soup_obj.findAll("tbody")[0].contents
+        for ind, time in enumerate(table_information[0].contents):
+            time = time.text
+            if time.isalnum():
+                day[time] = {}
+                time_of_day = day[time]
+                for row_item in table_information[1:]:
+                    content = row_item.contents
+                    if len(content) > 2:
+                        value = ("N/A" if content[ind].text == "" else
+                                 content[ind].text)
+                        time_of_day[content[0].text] = value
+
+
 def webscrape_information():
     """
     This navigates to the desired page and then scrapes the desired
@@ -196,14 +238,16 @@ def webscrape_information():
     navigate_to_page(driver, REGION, LOCATION, ACTIVITY)
 
     if LOCATION in driver.title:
-        content = driver.page_source
-        soup = BeautifulSoup(content, "html.parser")
+        soup = BeautifulSoup(driver.page_source, "html.parser")
+        # print(soup.prettify())
 
         water_temperature, recommended_wetsuit = get_sea_information(soup)
         print(f"The water temperature today is {water_temperature}. It is "
               f"recommended to use a {recommended_wetsuit} today.")
         surf_week = get_daily_rating(soup)
         print(surf_week)
+
+        get_surf_conditions(driver, surf_week)
 
     else:
         print("Not on the desired webpage")
