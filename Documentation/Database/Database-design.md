@@ -39,4 +39,6 @@ use an integer id.
 ### Surf Location Interest Table
 This links the surfer to the location they are interested in. The table
 will keep on adding entries as more users/locations of interest are added.
+An id is used as the primary key. This is so the id can be used to grab the
+user_id and surf_id so the information from the other tables can be accessed.
 
