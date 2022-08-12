@@ -239,7 +239,6 @@ def webscrape_information():
 
     if LOCATION in driver.title:
         soup = BeautifulSoup(driver.page_source, "html.parser")
-        # print(soup.prettify())
 
         water_temperature, recommended_wetsuit = get_sea_information(soup)
         print(f"The water temperature today is {water_temperature}. It is "
