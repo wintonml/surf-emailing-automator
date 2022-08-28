@@ -3,7 +3,7 @@ This document discusses the design of the database and why the approach was
 taken.
 
 ## High Level Overview
-![database-design](database-design.png)
+![database-design](Images/database-design.png)
 In the image above it shows the current design of the database. As seen
 three tables are needed. One for the user, the surf location/region and
 then the surf location interest. The surf location interest table connects
@@ -42,3 +42,11 @@ will keep on adding entries as more users/locations of interest are added.
 An id is used as the primary key. This is so the id can be used to grab the
 user_id and surf_id so the information from the other tables can be accessed.
 
+## Improvements
+This database allows for basic functionality of the program such as finding 
+the places of interest and getting a user's email. However, this is quite 
+limited as it will continue to email people however often the script runs 
+and if the conditions meet the requirements to notify a user. This means 
+that a user could be emailed multiple times for a certain location about 
+the same day. By creating another table that stores the location, day and 
+person notified this can be referenced when deciding if to email the person. 
