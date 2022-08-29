@@ -34,3 +34,12 @@ This will make the script run at 5AM every day.
 The browser used as part of this programme is Firefox. The reason being it
 is not as resource intensive in comparison to Chrome which is another
 common web browser.
+
+## Emailer
+To send the details to those who are interested a new email account was 
+created. This is so no private information will be shared publicly. 
+This is because as part of the script it will log in to this account and 
+send the emails. The details of this account (and the accounts of those who 
+want to be emailed) will be kept in a private database that will not be 
+pushed into this repo. This will be done by adding the name of the database 
+file to the `.gitignore` file.   
