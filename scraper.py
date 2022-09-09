@@ -207,7 +207,7 @@ def get_surf_conditions(web_driver, daily_surf):
         web_driver (WebDriver): WebDriver object
         daily_surf (dict): Dictionary containing each day of the week
 
-    return:
+    return (dict): dictionary containing surf conditions
     """
     for date in daily_surf:
         search_day = ' '.join(date.split()[1:])
@@ -226,6 +226,7 @@ def get_surf_conditions(web_driver, daily_surf):
                         value = ("N/A" if content[ind].text == "" else
                                  content[ind].text)
                         time_of_day[content[0].text] = value
+    return daily_surf
 
 
 def webscrape_information():
@@ -236,24 +237,33 @@ def webscrape_information():
     return: None
     """
     surf_spots = get_surf_location_and_regions()
+    locations_and_conditions = {}
     for surf_entry in surf_spots:
         location = surf_entry[0]
         region = surf_entry[1]
+        locations_and_conditions.setdefault(region, {})
+        locations_and_conditions[region].setdefault(location, {})
+        surf_location = locations_and_conditions[region][location]
         navigate_to_page(driver, region, location, ACTIVITY)
 
         if location in driver.title:
             soup = BeautifulSoup(driver.page_source, "html.parser")
 
             water_temperature, recommended_wetsuit = get_sea_information(soup)
+            surf_location["Water Temperature"] = water_temperature
+            surf_location["Wetsuit Recommendation"] = recommended_wetsuit
+
             print(f"The water temperature today is {water_temperature}. It is "
                   f"recommended to use a {recommended_wetsuit} today.")
             surf_week = get_daily_rating(soup)
             print(surf_week)
 
-            get_surf_conditions(driver, surf_week)
+            surf_location["Forecast"] = get_surf_conditions(driver, surf_week)
 
         else:
             print("Not on the desired webpage")
+
+        print(locations_and_conditions)
 
     driver.quit()  # Quit the instance of the browser that is open
 
